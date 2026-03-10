@@ -1,0 +1,788 @@
+openapi: 3.0.3
+info:
+  title: StoreOperation API (V1 MVP Draft)
+  version: 0.2.0-draft
+  description: |
+    面向 V1 MVP 的接口草案。
+    当前只围绕 5 个利润场景和 3 个工作台设计：
+    - 今日利润待办台
+    - 区域指挥台
+    - 总部策略与 ROI 台
+servers:
+  - url: http://localhost:8888/api/v1
+    description: local
+tags:
+  - name: UserAuth
+  - name: UserProfile
+  - name: Device
+  - name: ProfitDesk
+  - name: Prediction
+  - name: Alert
+  - name: Recommendation
+  - name: Task
+  - name: ROI
+paths:
+  /users/register:
+    post:
+      tags: [UserAuth]
+      summary: 用户名密码注册
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterReq'
+      responses:
+        '200':
+          description: 注册结果
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterRespEnvelope'
+  /users/login:
+    post:
+      tags: [UserAuth]
+      summary: 用户名密码登录
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginReq'
+      responses:
+        '200':
+          description: 登录成功返回 token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginRespEnvelope'
+  /users/profile:
+    get:
+      tags: [UserProfile]
+      summary: 获取个人资料
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 个人资料
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileRespEnvelope'
+
+  /devices/stores/{store_id}/overview:
+    get:
+      tags: [Device]
+      summary: 门店设备总览
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: store_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 门店设备状态和关键事件
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceOverviewRespEnvelope'
+
+  /devices/stores/{store_id}/robot-deliveries:
+    get:
+      tags: [Device]
+      summary: 门店机器人送餐链路摘要
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: store_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 机器人送餐链路摘要
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RobotDeliveryRespEnvelope'
+
+  /profit-desk/stores/{store_id}/today:
+    get:
+      tags: [ProfitDesk]
+      summary: 店长今日利润待办台
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: store_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 今日利润待办信息
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfitDeskRespEnvelope'
+
+  /profit-desk/regions/{region_id}/weekly:
+    get:
+      tags: [ProfitDesk]
+      summary: 区域指挥台周视图
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: region_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 区域指挥台数据
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegionDeskRespEnvelope'
+
+  /predictions/stores/{store_id}/summary:
+    get:
+      tags: [Prediction]
+      summary: 门店预测摘要
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: store_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 门店预测摘要
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PredictionSummaryRespEnvelope'
+
+  /alerts:
+    get:
+      tags: [Alert]
+      summary: 告警列表
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: store_id
+          schema:
+            type: string
+        - in: query
+          name: severity
+          schema:
+            type: string
+            enum: [low, medium, high, critical]
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [open, processing, closed, false_positive]
+      responses:
+        '200':
+          description: 告警分页列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertListRespEnvelope'
+  /alerts/{alert_id}/actions:
+    post:
+      tags: [Alert]
+      summary: 告警处理
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: alert_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AlertActionReq'
+      responses:
+        '200':
+          description: 告警处理结果
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertRespEnvelope'
+
+  /recommendations:
+    get:
+      tags: [Recommendation]
+      summary: 建议列表
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: store_id
+          schema:
+            type: string
+        - in: query
+          name: rec_type
+          schema:
+            type: string
+            enum: [replenishment, expiry_disposal, staffing, promotion]
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [new, adopted, rejected, expired]
+      responses:
+        '200':
+          description: 建议列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecommendationListRespEnvelope'
+  /recommendations/{rec_id}/adopt:
+    post:
+      tags: [Recommendation]
+      summary: 采纳建议
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: rec_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecommendationAdoptReq'
+      responses:
+        '200':
+          description: 建议采纳结果
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecommendationRespEnvelope'
+
+  /tasks:
+    get:
+      tags: [Task]
+      summary: 任务列表
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: store_id
+          schema:
+            type: string
+        - in: query
+          name: owner_id
+          schema:
+            type: string
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [todo, in_progress, done, overdue, canceled]
+      responses:
+        '200':
+          description: 任务列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskListRespEnvelope'
+    post:
+      tags: [Task]
+      summary: 创建任务
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaskReq'
+      responses:
+        '200':
+          description: 创建结果
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskRespEnvelope'
+  /tasks/{task_id}/complete:
+    post:
+      tags: [Task]
+      summary: 完成任务
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: task_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompleteTaskReq'
+      responses:
+        '200':
+          description: 完成结果
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskRespEnvelope'
+
+  /roi/stores/{store_id}/summary:
+    get:
+      tags: [ROI]
+      summary: 单店 ROI 摘要
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: store_id
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: date_from
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: date_to
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: 单店 ROI 摘要
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StoreROISummaryRespEnvelope'
+
+  /roi/regions/{region_id}/weekly:
+    get:
+      tags: [ROI]
+      summary: 区域周度 ROI 视图
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: region_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 区域周度 ROI
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegionROIRespEnvelope'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    EnvelopeBase:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+        message:
+          type: string
+          example: ok
+    RegisterReq:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+    LoginReq:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+    RegisterRespEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/EnvelopeBase'
+    LoginRespEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/EnvelopeBase'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                token:
+                  type: string
+    UserProfileRespEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/EnvelopeBase'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                user_id:
+                  type: string
+                username:
+                  type: string
+                role_code:
+                  type: string
+                store_id:
+                  type: string
+                region_id:
+                  type: string
+    ProfitAction:
+      type: object
+      properties:
+        action_id:
+          type: string
+        action_type:
+          type: string
+          enum: [replenishment, expiry_disposal, staffing, promotion, alert]
+        title:
+          type: string
+        reason:
+          type: string
+        expected_profit:
+          type: number
+        due_time:
+          type: string
+          format: date-time
+        owner_name:
+          type: string
+    ProfitDeskRespEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/EnvelopeBase'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                store_id:
+                  type: string
+                business_date:
+                  type: string
+                  format: date
+                recoverable_profit_amount:
+                  type: number
+                critical_alert_count:
+                  type: integer
+                recommendation_adopt_rate:
+                  type: number
+                site_event_count:
+                  type: integer
+                top_actions:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/ProfitAction'
+    RegionDeskRespEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/EnvelopeBase'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                region_id:
+                  type: string
+                business_week:
+                  type: string
+                high_risk_store_count:
+                  type: integer
+                overdue_task_count:
+                  type: integer
+                region_roi:
+                  type: number
+                device_online_rate:
+                  type: number
+    DeviceOverviewRespEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/EnvelopeBase'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                store_id:
+                  type: string
+                online_device_count:
+                  type: integer
+                offline_device_count:
+                  type: integer
+                critical_device_alert_count:
+                  type: integer
+                camera_event_count:
+                  type: integer
+                iot_event_count:
+                  type: integer
+    RobotDeliveryRespEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/EnvelopeBase'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                store_id:
+                  type: string
+                total_delivery_count:
+                  type: integer
+                avg_delivery_seconds:
+                  type: number
+                overtime_delivery_count:
+                  type: integer
+                failed_delivery_count:
+                  type: integer
+    AlertItem:
+      type: object
+      properties:
+        alert_id:
+          type: string
+        alert_type:
+          type: string
+        severity:
+          type: string
+        store_id:
+          type: string
+        title:
+          type: string
+        evidence_summary:
+          type: string
+        status:
+          type: string
+        trigger_time:
+          type: string
+          format: date-time
+    AlertListRespEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/EnvelopeBase'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/AlertItem'
+    AlertActionReq:
+      type: object
+      required: [action]
+      properties:
+        action:
+          type: string
+          enum: [confirm, false_positive, transfer, close]
+        assignee_id:
+          type: string
+        note:
+          type: string
+    AlertRespEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/EnvelopeBase'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/AlertItem'
+    RecommendationItem:
+      type: object
+      properties:
+        rec_id:
+          type: string
+        rec_type:
+          type: string
+        title:
+          type: string
+        reason_summary:
+          type: string
+        expected_profit:
+          type: number
+        confidence_score:
+          type: number
+        model_version:
+          type: string
+        status:
+          type: string
+    RecommendationListRespEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/EnvelopeBase'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/RecommendationItem'
+    RecommendationAdoptReq:
+      type: object
+      properties:
+        adjusted_action_json:
+          type: object
+        note:
+          type: string
+    RecommendationRespEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/EnvelopeBase'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/RecommendationItem'
+    TaskItem:
+      type: object
+      properties:
+        task_id:
+          type: string
+        source_type:
+          type: string
+        title:
+          type: string
+        owner_id:
+          type: string
+        status:
+          type: string
+        priority:
+          type: string
+        due_time:
+          type: string
+          format: date-time
+    TaskListRespEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/EnvelopeBase'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/TaskItem'
+    CreateTaskReq:
+      type: object
+      required: [source_id, source_type, store_id, owner_id, title]
+      properties:
+        source_id:
+          type: string
+        source_type:
+          type: string
+          enum: [alert, recommendation, manual]
+        store_id:
+          type: string
+        owner_id:
+          type: string
+        title:
+          type: string
+        priority:
+          type: string
+          enum: [p1, p2, p3]
+        due_time:
+          type: string
+          format: date-time
+    CompleteTaskReq:
+      type: object
+      properties:
+        result_note:
+          type: string
+        attachment_urls:
+          type: array
+          items:
+            type: string
+    TaskRespEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/EnvelopeBase'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/TaskItem'
+    StoreROISummaryRespEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/EnvelopeBase'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                store_id:
+                  type: string
+                attributable_profit_amount:
+                  type: number
+                stockout_profit_recovery:
+                  type: number
+                loss_reduction_profit:
+                  type: number
+                staffing_profit_gain:
+                  type: number
+                campaign_profit_gain:
+                  type: number
+                risk_loss_reduction:
+                  type: number
+                roi_value:
+                  type: number
+    PredictionSummaryRespEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/EnvelopeBase'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                store_id:
+                  type: string
+                demand_forecast_accuracy:
+                  type: number
+                expiry_risk_hit_rate:
+                  type: number
+                staffing_forecast_accuracy:
+                  type: number
+                campaign_roi_error:
+                  type: number
+    RegionROIRespEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/EnvelopeBase'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                region_id:
+                  type: string
+                business_week:
+                  type: string
+                total_attributable_profit:
+                  type: number
+                project_cost_amount:
+                  type: number
+                roi_value:
+                  type: number
